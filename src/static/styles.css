@@ -103,6 +103,23 @@ section h3 {
   border: 1px solid #d1d8ff;
 }
 
+.activity-card .participants li .unregister {
+  background: transparent;
+  border: none;
+  color: #c62828;
+  margin-left: 8px;
+  font-weight: 700;
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+  padding: 0 6px;
+  border-radius: 50%;
+}
+
+.activity-card .participants li .unregister:hover {
+  background: rgba(198, 40, 40, 0.08);
+}
+
 .activity-card .participants li.muted {
   background: transparent;
   color: #888;

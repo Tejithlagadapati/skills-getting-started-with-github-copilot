@@ -20,17 +20,25 @@ document.addEventListener("DOMContentLoaded", () => {
 
         const spotsLeft = details.max_participants - details.participants.length;
 
-        // Build participants HTML (safe-escaped)
+        // Build participants HTML (safe-escaped). Add a small unregister button for each participant.
         const participants = details.participants || [];
         const participantsHtml = participants.length
-          ? participants.map((p) => `<li>${escapeHtml(p)}</li>`).join("")
+          ? participants
+              .map((p) =>
+                `<li data-email="${escapeAttr(p)}">${escapeHtml(p)} <button class="unregister" data-activity="${escapeAttr(
+                  name
+                )}" data-email="${escapeAttr(p)}" aria-label="Remove ${escapeHtml(
+                  p
+                )}">&times;</button></li>`
+              )
+              .join("")
           : '<li class="muted">No participants yet</li>';
 
         activityCard.innerHTML = `
           <h4>${escapeHtml(name)}</h4>
           <p>${escapeHtml(details.description || "")}</p>
           <p><strong>Schedule:</strong> ${escapeHtml(details.schedule || "")}</p>
-          <p><strong>Availability:</strong> ${spotsLeft} spots left</p>
+          <p class="availability"><strong>Availability:</strong> ${spotsLeft} spots left</p>
 
           <div class="participants">
             <h5>Participants</h5>
@@ -38,7 +46,45 @@ document.addEventListener("DOMContentLoaded", () => {
           </div>
         `;
 
+        // After inserting, wire up unregister button handlers inside this card
         activitiesList.appendChild(activityCard);
+
+        activityCard.querySelectorAll(".unregister").forEach((btn) => {
+          btn.addEventListener("click", async (e) => {
+            e.preventDefault();
+            const activity = btn.getAttribute("data-activity");
+            const email = btn.getAttribute("data-email");
+
+            if (!activity || !email) return;
+
+            // Call unregister endpoint
+            try {
+              const resp = await fetch(
+                `/activities/${encodeURIComponent(activity)}/unregister?email=${encodeURIComponent(
+                  email
+                )}`,
+                { method: "POST" }
+              );
+
+              if (resp.ok) {
+                // Remove the participant element from UI
+                const li = btn.closest("li");
+                if (li) li.remove();
+
+                // Optionally refresh the activities list to update availability
+                // Here we reload everything to keep state consistent
+                fetchActivities();
+              } else {
+                const body = await resp.json().catch(() => ({}));
+                console.error("Failed to unregister:", body.detail || body.message || resp.statusText);
+                alert(body.detail || body.message || "Failed to remove participant");
+              }
+            } catch (err) {
+              console.error("Error unregistering:", err);
+              alert("Failed to remove participant. Please try again.");
+            }
+          });
+        });
 
         // Add option to select dropdown
         const option = document.createElement("option");
@@ -59,6 +105,16 @@ document.addEventListener("DOMContentLoaded", () => {
       .replace(/</g, "&lt;")
       .replace(/>/g, "&gt;")
       .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+  }
+
+  // Escape for attribute values (slightly different to ensure quotes are encoded)
+  function escapeAttr(str) {
+    return String(str || "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/\"/g, "&quot;")
       .replace(/'/g, "&#39;");
   }
 
